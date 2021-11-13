@@ -7,10 +7,16 @@ pub fn gen_iter(gen: anytype) GenIter(@TypeOf(gen), usize) {
     return GenIter(@TypeOf(gen), usize){ ._gen = gen };
 }
 
+/// A type with a `yield()` function that is used to "return" values from a generator.
+///
+/// As an implementation detail, this is a tagged union value that
+/// represents the current state of the generator iterator.
+pub const Yielder = GenIterState;
+
 fn GenIter(comptime G: anytype, comptime T: type) type {
     return struct {
         _gen: G,
-        _state: Yielder(T) = ._not_started,
+        _state: GenIterState(T) = ._not_started,
         _frame: @Frame(@This()._run_gen) = undefined,
 
         /// This function is used to detect that `.run()` has returned
@@ -65,11 +71,7 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
 
 const _StateTag = enum { _not_started, _running, _yielded, _waiting, _suspended_elsewhere, _finished };
 
-/// A type with a `yield()` function that is used to "return" values from a generator.
-///
-/// As an implementation detail, this is a tagged union value that
-/// represents the current state of the generator iterator.
-pub fn Yielder(comptime T: type) type {
+fn GenIterState(comptime T: type) type {
     return union(_StateTag) {
         /// the generator function was not yet called
         _not_started: void,
