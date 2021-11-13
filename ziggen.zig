@@ -1,10 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-// TODO:
-//  - gen_iter: generalize, by calculating value type T from @TypeOf(gen)
-//  - capture return value of generator function
-
 /// Returns an iterator (something with a `.next()` function) from the given generator.
 /// A generator is something with a `.run(y: *Yielder(...))` function.
 pub fn gen_iter(gen: anytype) GenIter(@TypeOf(gen), usize) {

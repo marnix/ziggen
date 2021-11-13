@@ -32,6 +32,8 @@ when using `pub const io_mode = .evented;`.
 
 * Allow non-`usize` generators.
 
+* Refactoring: Internally rename Yielder to GenIterState.
+
 * Add support for various active Zig package managers.
 
 * Support non-void `.run()` function.
