@@ -30,6 +30,8 @@ when using `pub const io_mode = .evented;`.
 
 ## Future work
 
+* Build with GitHub action, branch per Zig release (like zigmmverify).
+
 * Add support for various active Zig package managers.
 
 * Support non-void `.run()` function.
