@@ -15,10 +15,12 @@ pub const Yielder = GenIterState;
 
 fn ValueTypeOfGenType(comptime G: type) type {
     const RunFunction = @TypeOf(G.run);
-    const Yielder_T_Pointer = @typeInfo(RunFunction).Fn.args[1].arg_type.?;
-    const Yielder_T = @typeInfo(Yielder_T_Pointer).Pointer.child;
+    const run_function_args = @typeInfo(RunFunction).Fn.args;
+    std.debug.assert(run_function_args.len == 2); // .run() is expected to have two arguments (self: *@This(), y: *Yielder(...))
+    const Yielder_T_Pointer = run_function_args[1].arg_type.?;
+    const Yielder_T = @typeInfo(Yielder_T_Pointer).Pointer.child; // .run(...) takes a pointer (to a Yielder(...))
     const GenIterState_T = Yielder_T;
-    const GenIterState_T_yielded = TypeOfNamedFieldIn(@typeInfo(GenIterState_T).Union.fields, "_yielded");
+    const GenIterState_T_yielded = TypeOfNamedFieldIn(@typeInfo(GenIterState_T).Union.fields, "_yielded"); // .run(...) takes a *Yielder(...)
     const T = TypeOfNamedFieldIn(@typeInfo(GenIterState_T_yielded).Struct.fields, "value");
     return T;
 }
