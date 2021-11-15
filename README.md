@@ -30,7 +30,7 @@ when using `pub const io_mode = .evented;`.
 
 ## Future work
 
-* Build with GitHub action, branch per Zig release (like zigmmverify).
+* Create a separate zig-0.8.x branch, which uses Zig 0.8.1 in its GitHub workflow.
 
 * Add a state diagram for GenIterState transitions in GenIter.
 
