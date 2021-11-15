@@ -18,9 +18,17 @@ fn ValueTypeOfGenType(comptime G: type) type {
     const Yielder_T_Pointer = @typeInfo(RunFunction).Fn.args[1].arg_type.?;
     const Yielder_T = @typeInfo(Yielder_T_Pointer).Pointer.child;
     const GenIterState_T = Yielder_T;
-    const GenIterState_T_yielded = @typeInfo(GenIterState_T).Union.fields[2].field_type; // assumes _yielded is GenIterState's third field
-    const T = @typeInfo(GenIterState_T_yielded).Struct.fields[0].field_type; // assumes value: T is _yielded's first field
+    const GenIterState_T_yielded = TypeOfNamedFieldIn(@typeInfo(GenIterState_T).Union.fields, "_yielded");
+    const T = TypeOfNamedFieldIn(@typeInfo(GenIterState_T_yielded).Struct.fields, "value");
     return T;
+}
+
+fn TypeOfNamedFieldIn(comptime fields: anytype, field_name: []const u8) type {
+    for (fields) |f| {
+        if (std.mem.eql(u8, f.name, field_name)) {
+            return f.field_type;
+        }
+    } else @compileError("ziggen internal error: fields array doesn't contain expected field");
 }
 
 fn GenIter(comptime G: anytype, comptime T: type) type {
