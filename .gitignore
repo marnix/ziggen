@@ -1,0 +1,8 @@
+zig-cache/
+*.o
+*.exe
+
+# to allow extracting a zig master download
+/zig-*+*
+
+.*.swp
