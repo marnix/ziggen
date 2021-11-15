@@ -30,8 +30,6 @@ when using `pub const io_mode = .evented;`.
 
 ## Future work
 
-* Allow non-`usize` generators.
-
 * Add support for various active Zig package managers.
 
 * Support non-void `.run()` function.

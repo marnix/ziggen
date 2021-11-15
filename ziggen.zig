@@ -3,8 +3,8 @@ const assert = std.debug.assert;
 
 /// Returns an iterator (something with a `.next()` function) from the given generator.
 /// A generator is something with a `.run(y: *Yielder(...))` function.
-pub fn gen_iter(gen: anytype) GenIter(@TypeOf(gen), usize) {
-    return GenIter(@TypeOf(gen), usize){ ._gen = gen };
+pub fn gen_iter(gen: anytype) GenIter(@TypeOf(gen), ValueTypeOfGenType(@TypeOf(gen))) {
+    return GenIter(@TypeOf(gen), ValueTypeOfGenType(@TypeOf(gen))){ ._gen = gen };
 }
 
 /// A type with a `yield()` function that is used to "return" values from a generator.
@@ -12,6 +12,16 @@ pub fn gen_iter(gen: anytype) GenIter(@TypeOf(gen), usize) {
 /// As an implementation detail, this is a tagged union value that
 /// represents the current state of the generator iterator.
 pub const Yielder = GenIterState;
+
+fn ValueTypeOfGenType(comptime G: type) type {
+    const RunFunction = @TypeOf(G.run);
+    const Yielder_T_Pointer = @typeInfo(RunFunction).Fn.args[1].arg_type.?;
+    const Yielder_T = @typeInfo(Yielder_T_Pointer).Pointer.child;
+    const GenIterState_T = Yielder_T;
+    const GenIterState_T_yielded = @typeInfo(GenIterState_T).Union.fields[2].field_type; // assumes _yielded is GenIterState's third field
+    const T = @typeInfo(GenIterState_T_yielded).Struct.fields[0].field_type; // assumes value: T is _yielded's first field
+    return T;
+}
 
 fn GenIter(comptime G: anytype, comptime T: type) type {
     return struct {
@@ -113,23 +123,23 @@ const Bits = struct {
 
     sleep_time_ms: ?usize = null,
 
-    pub fn run(self: *@This(), y: *Yielder(usize)) void {
+    pub fn run(self: *@This(), y: *Yielder(bool)) void {
         if (self.sleep_time_ms) |ms| {
             std.debug.print("run(): before sleep\n", .{});
             std.time.sleep(ms * std.time.ns_per_ms);
             std.debug.print("run(): after sleep\n", .{});
         }
-        std.debug.print("run(): before yield(0)\n", .{});
-        y.yield(0);
-        std.debug.print("run(): after yield(0)\n", .{});
+        std.debug.print("run(): before yield(false)\n", .{});
+        y.yield(false);
+        std.debug.print("run(): after yield(false)\n", .{});
         if (self.sleep_time_ms) |ms| {
             std.debug.print("run(): before sleep\n", .{});
             std.time.sleep(ms * std.time.ns_per_ms);
             std.debug.print("run(): after sleep\n", .{});
         }
-        std.debug.print("run(): before yield(1)\n", .{});
-        y.yield(1);
-        std.debug.print("run(): after yield(1)\n", .{});
+        std.debug.print("run(): before yield(true)\n", .{});
+        y.yield(true);
+        std.debug.print("run(): after yield(true)\n", .{});
         if (self.sleep_time_ms) |ms| {
             std.debug.print("run(): before sleep\n", .{});
             std.time.sleep(ms * std.time.ns_per_ms);
@@ -143,14 +153,14 @@ test "generate all bits, finite iterator" {
     std.debug.print("\nSTART\n", .{});
     defer std.debug.print("END\n", .{});
     var iter = gen_iter(Bits{ .sleep_time_ms = 500 });
-    std.debug.print("client: before 0\n", .{});
-    try expectEqual(@as(?usize, 0), iter.next());
-    std.debug.print("client: after 0\n", .{});
-    std.debug.print("client: before 1\n", .{});
-    try expectEqual(@as(?usize, 1), iter.next());
-    std.debug.print("client: after 1\n", .{});
-    try expectEqual(@as(?usize, null), iter.next());
-    try expectEqual(@as(?usize, null), iter.next());
+    std.debug.print("client: before false\n", .{});
+    try expectEqual(@as(?bool, false), iter.next());
+    std.debug.print("client: after false\n", .{});
+    std.debug.print("client: before true\n", .{});
+    try expectEqual(@as(?bool, true), iter.next());
+    std.debug.print("client: after true\n", .{});
+    try expectEqual(@as(?bool, null), iter.next());
+    try expectEqual(@as(?bool, null), iter.next());
 }
 
 const Nats = struct {
