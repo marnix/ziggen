@@ -1,3 +1,7 @@
+_Note that this branch is built using nightly 'master' zig._
+
+[![Build with Zig master](https://github.com/marnix/ziggen/workflows/Build%20with%20zig%20master/badge.svg?branch=main)](https://github.com/marnix/ziggen/actions?query=branch%3Amain)
+
 # ziggen
 
 Generators for Zig, built on top of `async` and `suspend`.
