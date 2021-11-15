@@ -32,6 +32,9 @@ when using `pub const io_mode = .evented;`.
 
 * Build with GitHub action, branch per Zig release (like zigmmverify).
 
+* Add a state diagram for GenIterState transitions in GenIter.
+
 * Add support for various active Zig package managers.
 
 * Support non-void `.run()` function.
+  (For this, split `_finished` into `_returned` and `_stopped`.)
