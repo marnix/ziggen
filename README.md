@@ -34,11 +34,20 @@ when using `pub const io_mode = .evented;`.
 
 ## Future work
 
+* Properly `await` (the function that calls) `.run()`,
+  to make sure nothing remains 'hanging' after the iterator ends,
+  if it is an `is_async = true` generator.
+  (For this, split `_finished` into `_returned` and `_stopped`.)
+
 * Create a separate zig-0.8.x branch, which uses Zig 0.8.1 in its GitHub workflow.
 
 * Add a state diagram for GenIterState transitions in GenIter.
 
 * Add support for various active Zig package managers.
 
+* See whether breaking off an `is_async = true` generator iterator
+  (so just stopping to calling `.next()`, throwing the iterator away)
+  leaves behind any 'hanging' suspended functions
+  that might cause trouble in code that follows it.
+
 * Support non-void `.run()` function.
-  (For this, split `_finished` into `_returned` and `_stopped`.)
