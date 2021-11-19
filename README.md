@@ -1,6 +1,6 @@
 _Note that this branch is built using nightly 'master' zig.
 The more actively developed branch is
-[zig-0.8.x](https://github.com/marnix/zigmmverify/tree/zig-0.8.x).
+[zig-0.8.x](https://github.com/marnix/ziggen/tree/zig-0.8.x).
 Changes are periodically merged from there to this branch._
 
 [![Build with Zig master](https://github.com/marnix/ziggen/workflows/Build%20with%20zig%20master/badge.svg?branch=main)](https://github.com/marnix/ziggen/actions?query=branch%3Amain)
