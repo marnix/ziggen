@@ -1,6 +1,4 @@
-_Note that this branch is built using nightly 'master' zig._
-
-[![Build with Zig master](https://github.com/marnix/ziggen/workflows/Build%20with%20zig%20master/badge.svg?branch=main)](https://github.com/marnix/ziggen/actions?query=branch%3Amain)
+[![Build with Zig 0.8.1](https://github.com/marnix/ziggen/workflows/Build%20with%20zig%200.8.x/badge.svg?branch=zig-0.8.x)](https://github.com/marnix/ziggen/actions?query=branch%3Azig-0.8.x)
 
 # ziggen
 
@@ -38,8 +36,6 @@ when using `pub const io_mode = .evented;`.
   to make sure nothing remains 'hanging' after the iterator ends,
   if it is an `is_async = true` generator.
   (For this, split `_finished` into `_returned` and `_stopped`.)
-
-* Create a separate zig-0.8.x branch, which uses Zig 0.8.1 in its GitHub workflow.
 
 * Add a state diagram for GenIterState transitions in GenIter.
 
