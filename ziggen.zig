@@ -45,11 +45,11 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
             assert(self._state == ._running or self._state == ._suspended_elsewhere);
             while (self._state == ._suspended_elsewhere) { // ...but perhaps `if` if sufficient.
                 const fp = self._state._suspended_elsewhere;
-                self._state = ._finished;
+                self._state = ._returned;
                 resume fp; // let the last next() continue
             }
-            assert(self._state == ._running or self._state == ._finished);
-            self._state = ._finished;
+            assert(self._state == ._running or self._state == ._returned);
+            self._state = ._returned;
         }
 
         /// Return the next value of this generator iterator.
@@ -66,7 +66,7 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
                         if (@hasDecl(G, "is_async") and G.is_async == true) {
                             self._state = .{ ._suspended_elsewhere = @frame() };
                             suspend {} // ...so that this call of next() gets suspended, to be resumed by the client in yield(), or after, in _run_gen()
-                            assert(self._state == ._yielded or self._state == ._finished);
+                            assert(self._state == ._yielded or self._state == ._returned);
                         } else @panic("generator suspended but not in yield(); mark generator `const is_async = true;`?");
                     },
                     ._yielded => |yield_state| {
@@ -76,11 +76,15 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
                     ._waiting => |fp| {
                         self._state = ._running;
                         resume fp; // let the generator continue
-                        assert(self._state == ._yielded or self._state == ._running or self._state == ._finished);
+                        assert(self._state == ._yielded or self._state == ._running or self._state == ._returned);
                     },
                     ._suspended_elsewhere => unreachable,
-                    ._finished => {
-                        //TODO await self._frame; // use nosuspend?
+                    ._returned => {
+                        await self._frame; // TODO: use nosuspend?
+                        self._state = ._stopped;
+                        return null;
+                    },
+                    ._stopped => {
                         return null;
                     },
                 }
@@ -89,7 +93,7 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
     };
 }
 
-const _StateTag = enum { _not_started, _running, _yielded, _waiting, _suspended_elsewhere, _finished };
+const _StateTag = enum { _not_started, _running, _yielded, _waiting, _suspended_elsewhere, _returned, _stopped };
 
 fn GenIterState(comptime T: type) type {
     return union(_StateTag) {
@@ -104,7 +108,9 @@ fn GenIterState(comptime T: type) type {
         /// the generator function has suspended, but not in yield()
         _suspended_elsewhere: anyframe,
         /// the generator function has returned
-        _finished: void,
+        _returned: void,
+        /// the generator function value has been returned
+        _stopped: void,
 
         /// Yield the given value from the generator that received this instance
         pub fn yield(self: *@This(), value: T) void {
