@@ -1,6 +1,14 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+const _debug = if (false) std.debug.print else _noopDebugPrint;
+
+fn _noopDebugPrint(comptime fmt: []const u8, args: anytype) void {
+    _ = fmt;
+    _ = args;
+    // do nothing
+}
+
 /// Returns an iterator (something with a `.next()` function) from the given generator.
 /// A generator is something with a `.run(y: *Yielder(...))` function.
 pub fn genIter(gen: anytype) GenIter(@TypeOf(gen), ValueTypeOfGenType(@TypeOf(gen))) {
@@ -141,40 +149,40 @@ const Bits = struct {
 
     pub fn run(self: *@This(), y: *Yielder(bool)) void {
         if (self.sleep_time_ms) |ms| {
-            std.debug.print("run(): before sleep\n", .{});
+            _debug("run(): before sleep\n", .{});
             std.time.sleep(ms * std.time.ns_per_ms);
-            std.debug.print("run(): after sleep\n", .{});
+            _debug("run(): after sleep\n", .{});
         }
-        std.debug.print("run(): before yield(false)\n", .{});
+        _debug("run(): before yield(false)\n", .{});
         y.yield(false);
-        std.debug.print("run(): after yield(false)\n", .{});
+        _debug("run(): after yield(false)\n", .{});
         if (self.sleep_time_ms) |ms| {
-            std.debug.print("run(): before sleep\n", .{});
+            _debug("run(): before sleep\n", .{});
             std.time.sleep(ms * std.time.ns_per_ms);
-            std.debug.print("run(): after sleep\n", .{});
+            _debug("run(): after sleep\n", .{});
         }
-        std.debug.print("run(): before yield(true)\n", .{});
+        _debug("run(): before yield(true)\n", .{});
         y.yield(true);
-        std.debug.print("run(): after yield(true)\n", .{});
+        _debug("run(): after yield(true)\n", .{});
         if (self.sleep_time_ms) |ms| {
-            std.debug.print("run(): before sleep\n", .{});
+            _debug("run(): before sleep\n", .{});
             std.time.sleep(ms * std.time.ns_per_ms);
-            std.debug.print("run(): after sleep\n", .{});
+            _debug("run(): after sleep\n", .{});
         }
     }
 };
 
 // This test requires --test-evented-io, because Bits is an async generator.
 test "generate all bits, finite iterator" {
-    std.debug.print("\nSTART\n", .{});
-    defer std.debug.print("END\n", .{});
+    _debug("\nSTART\n", .{});
+    defer _debug("END\n", .{});
     var iter = genIter(Bits{ .sleep_time_ms = 500 });
-    std.debug.print("client: before false\n", .{});
+    _debug("client: before false\n", .{});
     try expectEqual(@as(?bool, false), iter.next());
-    std.debug.print("client: after false\n", .{});
-    std.debug.print("client: before true\n", .{});
+    _debug("client: after false\n", .{});
+    _debug("client: before true\n", .{});
     try expectEqual(@as(?bool, true), iter.next());
-    std.debug.print("client: after true\n", .{});
+    _debug("client: after true\n", .{});
     try expectEqual(@as(?bool, null), iter.next());
     try expectEqual(@as(?bool, null), iter.next());
 }
