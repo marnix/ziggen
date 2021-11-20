@@ -165,6 +165,11 @@ fn GenIterState(comptime T: type) type {
                         const i = _debugGenNum();
                         _debug("> {}\n", .{i});
                         resume fp;
+                        // do nothing here that requires any context
+                        // because this seems to be called at the very end
+                        // but only once, even if multiple iterators have run
+                        // and the moment it is called seems to differ as well
+                        // between Linux vs Windows
                         _debug("< ?\n", .{});
                     },
                     else => {},
