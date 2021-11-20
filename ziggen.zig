@@ -3,7 +3,7 @@ const assert = std.debug.assert;
 
 /// Returns an iterator (something with a `.next()` function) from the given generator.
 /// A generator is something with a `.run(y: *Yielder(...))` function.
-pub fn gen_iter(gen: anytype) GenIter(@TypeOf(gen), ValueTypeOfGenType(@TypeOf(gen))) {
+pub fn genIter(gen: anytype) GenIter(@TypeOf(gen), ValueTypeOfGenType(@TypeOf(gen))) {
     return GenIter(@TypeOf(gen), ValueTypeOfGenType(@TypeOf(gen))){ ._gen = gen };
 }
 
@@ -168,7 +168,7 @@ const Bits = struct {
 test "generate all bits, finite iterator" {
     std.debug.print("\nSTART\n", .{});
     defer std.debug.print("END\n", .{});
-    var iter = gen_iter(Bits{ .sleep_time_ms = 500 });
+    var iter = genIter(Bits{ .sleep_time_ms = 500 });
     std.debug.print("client: before false\n", .{});
     try expectEqual(@as(?bool, false), iter.next());
     std.debug.print("client: after false\n", .{});
@@ -191,7 +191,7 @@ const Nats = struct {
 };
 
 test "sum the first 7 natural numbers" {
-    var iter = gen_iter(Nats{ .below = 7 });
+    var iter = genIter(Nats{ .below = 7 });
     var sum: usize = 0;
     while (iter.next()) |i| {
         sum += i;
@@ -200,7 +200,7 @@ test "sum the first 7 natural numbers" {
 }
 
 test "generate all bits, bounded iterator" {
-    var iter = gen_iter(Nats{ .below = 2 });
+    var iter = genIter(Nats{ .below = 2 });
     try expectEqual(@as(?usize, 0), iter.next());
     try expectEqual(@as(?usize, 1), iter.next());
     try expectEqual(@as(?usize, null), iter.next());
@@ -208,7 +208,7 @@ test "generate all bits, bounded iterator" {
 }
 
 test "sum by breaking infinite generator" {
-    var iter = gen_iter(Nats{ .below = null });
+    var iter = genIter(Nats{ .below = null });
     var sum: usize = 0;
     while (iter.next()) |i| {
         if (i == 7) break;
