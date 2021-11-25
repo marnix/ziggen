@@ -60,21 +60,7 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
             _debug("_run_gen(): enter\n", .{});
             self._gen.run(&(self._state)); // the generator must have a .run(*Yielder(T)) function
             _debug("_run_gen(): after run() in state {}\n", .{@as(_StateTag, self._state)});
-            const orig_self_state = self._state;
-            assert(orig_self_state == ._running);
-            self._state = .{ ._valued = .{ .value = null, .frame_pointer = @frame() } };
-            _debug("_run_gen(): to state {}\n", .{@as(_StateTag, self._state)});
-            _debug("_run_gen(): before suspend\n", .{});
-            suspend {
-                if (orig_self_state._running) |fp| {
-                    const i = _debugGenNum();
-                    _debug("> {}\n", .{i});
-                    resume fp;
-                    _debug("< ?\n", .{});
-                }
-            }
-            _debug("_run_gen(): after suspend (elsewhere? {})\n", .{orig_self_state._running != null});
-            _debug("_run_gen(): leave\n", .{});
+            self._state._suspend_with_value(null);
         }
 
         /// Return the next value of this generator iterator.
@@ -165,12 +151,16 @@ fn GenIterState(comptime T: type) type {
 
         /// Yield the given value from the generator that received this instance
         pub fn yield(self: *@This(), value: T) void {
+            self._suspend_with_value(value);
+        }
+
+        fn _suspend_with_value(self: *@This(), value: ?T) void {
             const orig_self: @This() = self.*;
             assert(orig_self == ._running);
-            _debug("yield(): enter state {}\n", .{@as(_StateTag, orig_self)});
+            _debug("_suspend_with_value(): enter state {} (with value? {})\n", .{ @as(_StateTag, orig_self), value != null });
             self.* = .{ ._valued = .{ .value = value, .frame_pointer = @frame() } };
-            _debug("yield(): to state {}\n", .{@as(_StateTag, self.*)});
-            _debug("yield(): before suspend\n", .{});
+            _debug("_suspend_with_value(): to state {}\n", .{@as(_StateTag, self.*)});
+            _debug("_suspend_with_value(): before suspend\n", .{});
             suspend {
                 if (orig_self._running) |fp| {
                     const i = _debugGenNum();
@@ -179,7 +169,7 @@ fn GenIterState(comptime T: type) type {
                     _debug("< ?\n", .{});
                 }
             }
-            _debug("yield(): after suspend (elsewhere? {})\n", .{orig_self._running != null});
+            _debug("_suspend_with_value(): after suspend (elsewhere? {})\n", .{orig_self._running != null});
         }
     };
 }
