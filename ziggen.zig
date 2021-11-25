@@ -35,8 +35,9 @@ fn ValueTypeOfGenType(comptime G: type) type {
     const Yielder_T_Pointer = run_function_args[1].arg_type.?;
     const Yielder_T = @typeInfo(Yielder_T_Pointer).Pointer.child; // .run(...) takes a pointer (to a Yielder(...))
     const GenIterState_T = Yielder_T;
-    const GenIterState_T_yielded = TypeOfNamedFieldIn(@typeInfo(GenIterState_T).Union.fields, "_yielded"); // .run(...) takes a *Yielder(...)
-    const T = TypeOfNamedFieldIn(@typeInfo(GenIterState_T_yielded).Struct.fields, "value");
+    const GenIterState_T_valued = TypeOfNamedFieldIn(@typeInfo(GenIterState_T).Union.fields, "_valued"); // .run(...) takes a *Yielder(...)
+    const Yielded_value = TypeOfNamedFieldIn(@typeInfo(GenIterState_T_valued).Struct.fields, "value");
+    const T = @typeInfo(Yielded_value).Optional.child;
     return T;
 }
 
@@ -61,7 +62,7 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
             _debug("_run_gen(): after run() in state {}\n", .{@as(_StateTag, self._state)});
             const orig_self_state = self._state;
             assert(orig_self_state == ._running);
-            self._state = .{ ._returned = .{ .frame_pointer = @frame() } };
+            self._state = .{ ._valued = .{ .value = null, .frame_pointer = @frame() } };
             _debug("_run_gen(): to state {}\n", .{@as(_StateTag, self._state)});
             _debug("_run_gen(): before suspend\n", .{});
             suspend {
@@ -99,13 +100,27 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
                             _debug("next(): before suspend\n", .{});
                             suspend {} // ...so that this call of next() gets suspended, to be resumed by the client in yield(), or after, in _run_gen()
                             _debug("next(): after suspend in state {}\n", .{@as(_StateTag, self._state)});
-                            assert(self._state == ._yielded or self._state == ._returned);
+                            assert(self._state == ._valued);
                         } else @panic("generator suspended but not in yield(); mark generator `const is_async = true;`?");
                     },
-                    ._yielded => |yield_state| {
-                        self._state = .{ ._waiting = yield_state.frame_pointer };
-                        _debug("next(): to state {}\n", .{@as(_StateTag, self._state)});
-                        return yield_state.value;
+                    ._valued => |value_state| {
+                        if (value_state.value) |v| {
+                            // .yield(v) has been called
+                            self._state = .{ ._waiting = value_state.frame_pointer };
+                            _debug("next(): to state {}\n", .{@as(_StateTag, self._state)});
+                            return v;
+                        } else {
+                            // the generator function has returned, resume in _run_gen()
+                            _debug("next(): before resume\n", .{});
+                            const i = _debugGenNum();
+                            _debug("> {}\n", .{i});
+                            resume value_state.frame_pointer;
+                            _debug("< {}\n", .{i});
+                            _debug("next(): after resume\n", .{});
+                            nosuspend await self._frame; // will never suspend anymore, so this next() call shouldn't either
+                            self._state = ._stopped;
+                            return null;
+                        }
                     },
                     ._waiting => |fp| {
                         self._state = .{ ._running = null };
@@ -116,18 +131,7 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
                         resume fp; // let the generator continue
                         _debug("< {}\n", .{i});
                         _debug("next(): after resume\n", .{});
-                        assert(self._state == ._yielded or self._state == ._running or self._state == ._returned);
-                    },
-                    ._returned => |return_state| {
-                        _debug("next(): before resume\n", .{});
-                        const i = _debugGenNum();
-                        _debug("> {}\n", .{i});
-                        resume return_state.frame_pointer;
-                        _debug("< {}\n", .{i});
-                        _debug("next(): after resume\n", .{});
-                        nosuspend await self._frame; // will never suspend anymore, so this next() call shouldn't either
-                        self._state = ._stopped;
-                        return null;
+                        assert(self._state == ._valued or self._state == ._running);
                     },
                     ._stopped => {
                         return null;
@@ -138,7 +142,7 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
     };
 }
 
-const _StateTag = enum { _not_started, _running, _yielded, _waiting, _returned, _stopped };
+const _StateTag = enum { _not_started, _running, _valued, _waiting, _stopped };
 
 fn GenIterState(comptime T: type) type {
     return union(_StateTag) {
@@ -147,13 +151,16 @@ fn GenIterState(comptime T: type) type {
         /// the generator function did not reach yield() after being called or resumed (whichever came last),
         /// but it optionally suspended in outside of yield(), as captured by next()
         _running: ?anyframe,
-        /// the generator function has suspended in yield(), and the value still has to be returned to the client
-        _yielded: struct { value: T, frame_pointer: anyframe },
-        /// the generator function has suspended in yield(), and the value has already been returned
+        /// the generator function has suspended in yield() or it has returned, and the value still has to be returned to the client
+        _valued: struct {
+            /// non-null if from yield(), null if the generator function returned
+            value: ?T,
+            /// the point where next() should resume
+            frame_pointer: anyframe,
+        },
+        /// the generator function has suspended in yield() or it has returned, and the value has already been returned
         _waiting: anyframe,
         /// the generator function has returned
-        _returned: struct { frame_pointer: anyframe },
-        /// the generator function value has been returned
         _stopped: void,
 
         /// Yield the given value from the generator that received this instance
@@ -161,7 +168,7 @@ fn GenIterState(comptime T: type) type {
             const orig_self: @This() = self.*;
             assert(orig_self == ._running);
             _debug("yield(): enter state {}\n", .{@as(_StateTag, orig_self)});
-            self.* = .{ ._yielded = .{ .value = value, .frame_pointer = @frame() } };
+            self.* = .{ ._valued = .{ .value = value, .frame_pointer = @frame() } };
             _debug("yield(): to state {}\n", .{@as(_StateTag, self.*)});
             _debug("yield(): before suspend\n", .{});
             suspend {
