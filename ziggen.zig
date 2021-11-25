@@ -195,7 +195,7 @@ fn EmptySleeper(comptime asy: bool) type {
 
         sleep_time_ms: ?usize = null,
 
-        pub fn run(self: *@This(), y: *Yielder(bool)) void {
+        pub fn run(self: *@This(), _: *Yielder(bool)) void {
             if (self.sleep_time_ms) |ms| {
                 _debug("run(): before sleep\n", .{});
                 std.time.sleep(ms * std.time.ns_per_ms);
