@@ -37,11 +37,6 @@ when using `pub const io_mode = .evented;`.
 
 ## Future work
 
-* Properly `await` (the function that calls) `.run()`,
-  to make sure nothing remains 'hanging' after the iterator ends,
-  if it is an `is_async = true` generator.
-  (For this, split `_finished` into `_returned` and `_stopped`.)
-
 * Add a state diagram for GenIterState transitions in GenIter.
 
 * Add support for various active Zig package managers.
