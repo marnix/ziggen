@@ -166,6 +166,10 @@ fn GenIterState(comptime T: type) type {
                     const i = _debugGenNum();
                     _debug("> {}\n", .{i});
                     resume fp;
+                    // This point is only reached very late; when the event loop ends?
+                    // For some reason, at that point our local state,
+                    // the current stack frame, is not available anymore...
+                    // So we should not be doing anything context-dependent here...
                     _debug("< ?\n", .{});
                 }
             }
@@ -204,7 +208,8 @@ test "empty, sync" {
 }
 
 test "empty, async" {
-    // auto-skipped if not --test-evented-io
+    // auto-skipped if not --test-evented-io, because EmptySleeper(true) is an async generator
+    assert(@import("root").io_mode == .evented);
     _debug("\nSTART\n", .{});
     defer _debug("END\n", .{});
     var iter = genIter(EmptySleeper(true){ .sleep_time_ms = null });
@@ -226,7 +231,8 @@ test "empty sleeper, sync" {
 }
 
 test "empty sleeper, async" {
-    // auto-skipped if not --test-evented-io
+    // auto-skipped if not --test-evented-io, because EmptySleeper(true) is an async generator
+    assert(@import("root").io_mode == .evented);
     _debug("\nSTART\n", .{});
     defer _debug("END\n", .{});
     var iter = genIter(EmptySleeper(true){ .sleep_time_ms = 500 });
@@ -264,8 +270,9 @@ const Bits = struct {
     }
 };
 
-// This test requires --test-evented-io, because Bits is an async generator.
 test "generate all bits, finite iterator" {
+    // auto-skipped if not --test-evented-io, because Bits is an async generator
+    assert(@import("root").io_mode == .evented);
     _debug("\nSTART\n", .{});
     defer _debug("END\n", .{});
     var iter = genIter(Bits{ .sleep_time_ms = 500 });
