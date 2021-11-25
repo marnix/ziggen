@@ -32,6 +32,9 @@ when using `pub const io_mode = .evented;`.
 
 ## Future work
 
+* Make `next()` not async if generator is not `is_async = true`.
+  (Currently `await` always makes it async.)
+
 * Properly `await` (the function that calls) `.run()`,
   to make sure nothing remains 'hanging' after the iterator ends,
   if it is an `is_async = true` generator.
