@@ -189,24 +189,57 @@ fn GenIterState(comptime T: type) type {
 
 const expectEqual = std.testing.expectEqual;
 
-const EmptySleeper = struct {
-    pub const is_async = true;
+fn EmptySleeper(comptime asy: bool) type {
+    return struct {
+        pub const is_async = asy;
 
-    sleep_time_ms: ?usize = null,
+        sleep_time_ms: ?usize = null,
 
-    pub fn run(self: *@This(), y: *Yielder(bool)) void {
-        if (self.sleep_time_ms) |ms| {
-            _debug("run(): before sleep\n", .{});
-            std.time.sleep(ms * std.time.ns_per_ms);
-            _debug("run(): after sleep\n", .{});
+        pub fn run(self: *@This(), y: *Yielder(bool)) void {
+            if (self.sleep_time_ms) |ms| {
+                _debug("run(): before sleep\n", .{});
+                std.time.sleep(ms * std.time.ns_per_ms);
+                _debug("run(): after sleep\n", .{});
+            }
         }
-    }
-};
+    };
+}
 
-test "empty sleeper" {
+test "empty, sync" {
     _debug("\nSTART\n", .{});
     defer _debug("END\n", .{});
-    var iter = genIter(EmptySleeper{ .sleep_time_ms = 500 });
+    var iter = genIter(EmptySleeper(false){ .sleep_time_ms = null });
+    try expectEqual(@as(?bool, null), iter.next());
+    try expectEqual(@as(?bool, null), iter.next());
+}
+
+test "empty, async" {
+    // auto-skipped if not --test-evented-io
+    _debug("\nSTART\n", .{});
+    defer _debug("END\n", .{});
+    var iter = genIter(EmptySleeper(true){ .sleep_time_ms = null });
+    try expectEqual(@as(?bool, null), iter.next());
+    try expectEqual(@as(?bool, null), iter.next());
+}
+
+test "empty sleeper, sync" {
+    if (@import("root").io_mode == .evented) {
+        // sleep() would suspend, making this non-async generator panic
+        return error.SkipZigTest;
+    }
+    // blocking I/O, therefore sleep() does not suspend
+    _debug("\nSTART\n", .{});
+    defer _debug("END\n", .{});
+    var iter = genIter(EmptySleeper(false){ .sleep_time_ms = 500 });
+    try expectEqual(@as(?bool, null), iter.next());
+    try expectEqual(@as(?bool, null), iter.next());
+}
+
+test "empty sleeper, async" {
+    // auto-skipped if not --test-evented-io
+    _debug("\nSTART\n", .{});
+    defer _debug("END\n", .{});
+    var iter = genIter(EmptySleeper(true){ .sleep_time_ms = 500 });
     try expectEqual(@as(?bool, null), iter.next());
     try expectEqual(@as(?bool, null), iter.next());
 }
