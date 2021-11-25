@@ -59,18 +59,20 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
             _debug("_run_gen(): enter\n", .{});
             self._gen.run(&(self._state)); // the generator must have a .run(*Yielder(T)) function
             _debug("_run_gen(): after run() in state {}\n", .{@as(_StateTag, self._state)});
-            assert(self._state == ._running);
-            if (self._state._running) |fp| {
-                self._state = ._returned;
-                _debug("_run_gen(): before resume\n", .{});
-                const i = _debugGenNum();
-                _debug("> {}\n", .{i});
-                resume fp; // let the last next() continue
-                _debug("< {}\n", .{i});
-                _debug("_run_gen(): after resume\n", .{});
+            const orig_self_state = self._state;
+            assert(orig_self_state == ._running);
+            self._state = .{ ._returned = .{ .frame_pointer = @frame() } };
+            _debug("_run_gen(): to state {}\n", .{@as(_StateTag, self._state)});
+            _debug("_run_gen(): before suspend\n", .{});
+            suspend {
+                if (orig_self_state._running) |fp| {
+                    const i = _debugGenNum();
+                    _debug("> {}\n", .{i});
+                    resume fp;
+                    _debug("< ?\n", .{});
+                }
             }
-            assert(self._state == ._running or self._state == ._returned);
-            self._state = ._returned;
+            _debug("_run_gen(): after suspend (elsewhere? {})\n", .{orig_self_state._running != null});
             _debug("_run_gen(): leave\n", .{});
         }
 
@@ -96,7 +98,7 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
                             _debug("next(): to state {}\n", .{@as(_StateTag, self._state)});
                             _debug("next(): before suspend\n", .{});
                             suspend {} // ...so that this call of next() gets suspended, to be resumed by the client in yield(), or after, in _run_gen()
-                            _debug("next(): after suspend\n", .{});
+                            _debug("next(): after suspend in state {}\n", .{@as(_StateTag, self._state)});
                             assert(self._state == ._yielded or self._state == ._returned);
                         } else @panic("generator suspended but not in yield(); mark generator `const is_async = true;`?");
                     },
@@ -116,8 +118,14 @@ fn GenIter(comptime G: anytype, comptime T: type) type {
                         _debug("next(): after resume\n", .{});
                         assert(self._state == ._yielded or self._state == ._running or self._state == ._returned);
                     },
-                    ._returned => {
-                        await self._frame; // TODO: use nosuspend?
+                    ._returned => |return_state| {
+                        _debug("next(): before resume\n", .{});
+                        const i = _debugGenNum();
+                        _debug("> {}\n", .{i});
+                        resume return_state.frame_pointer;
+                        _debug("< {}\n", .{i});
+                        _debug("next(): after resume\n", .{});
+                        nosuspend await self._frame; // will never suspend anymore, so this next() call shouldn't either
                         self._state = ._stopped;
                         return null;
                     },
@@ -144,7 +152,7 @@ fn GenIterState(comptime T: type) type {
         /// the generator function has suspended in yield(), and the value has already been returned
         _waiting: anyframe,
         /// the generator function has returned
-        _returned: void,
+        _returned: struct { frame_pointer: anyframe },
         /// the generator function value has been returned
         _stopped: void,
 
@@ -161,11 +169,6 @@ fn GenIterState(comptime T: type) type {
                     const i = _debugGenNum();
                     _debug("> {}\n", .{i});
                     resume fp;
-                    // do nothing here that requires any context
-                    // because this seems to be called at the very end
-                    // but only once, even if multiple iterators have run
-                    // and the moment it is called seems to differ as well
-                    // between Linux vs Windows
                     _debug("< ?\n", .{});
                 }
             }
