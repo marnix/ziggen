@@ -182,6 +182,28 @@ fn GenIterState(comptime T: type) type {
 
 const expectEqual = std.testing.expectEqual;
 
+const EmptySleeper = struct {
+    pub const is_async = true;
+
+    sleep_time_ms: ?usize = null,
+
+    pub fn run(self: *@This(), y: *Yielder(bool)) void {
+        if (self.sleep_time_ms) |ms| {
+            _debug("run(): before sleep\n", .{});
+            std.time.sleep(ms * std.time.ns_per_ms);
+            _debug("run(): after sleep\n", .{});
+        }
+    }
+};
+
+test "empty sleeper" {
+    _debug("\nSTART\n", .{});
+    defer _debug("END\n", .{});
+    var iter = genIter(EmptySleeper{ .sleep_time_ms = 500 });
+    try expectEqual(@as(?bool, null), iter.next());
+    try expectEqual(@as(?bool, null), iter.next());
+}
+
 const Bits = struct {
     pub const is_async = true;
 
