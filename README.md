@@ -10,10 +10,13 @@ Changes are periodically merged from there to this branch._
 Generators for Zig, built on top of `async` and `suspend`.
 
 ```zig
+const std = @import("std");
+const ziggen = @import("ziggen.zig");
+
 const Nats = struct {
     below: usize,
 
-    pub fn run(self: *@This(), y: *Yielder(usize)) void {
+    pub fn run(self: *@This(), y: *ziggen.Yielder(usize)) void {
         var i: usize = 0;
         while (i < self.below) : (i += 1) {
             y.yield(i);
@@ -21,8 +24,10 @@ const Nats = struct {
     }
 };
 
+const expectEqual = std.testing.expectEqual;
+
 test "sum the first 7 natural numbers" {
-    var iter = gen_iter(Nats{ .below = 7 });
+    var iter = ziggen.genIter(Nats{ .below = 7 });
     var sum: usize = 0;
     while (iter.next()) |i| {
         sum += i;
@@ -34,8 +39,26 @@ test "sum the first 7 natural numbers" {
 Also supports calling async functions from `.run()`,
 for example many functions in std
 when using `pub const io_mode = .evented;`.
+This is declared by `pub const is_async = true;` in the generator,
+which makes `.next()` an async function.
+
 
 ## Future work
+
+* Support `defer` in `.run()`, and other clean-up,
+  by allowing to explicitly 'cancel' the generator.
+  Idea: Mark such a generator by giving it a `.deinit()` function.
+  This function would be empty if only `defer` is used,
+  but could do more elaborate clean-up if necessary.
+
+* Allow `.run()` to return an error.
+  Think about how the `genIter()` client would see/get that.
+  (Probably closely linked to non-void `.run()` function.)
+
+* For memory performance avoid `?T`, and therefore
+  split `_running` and `_valued` states into two separate states,
+  per [SpexGuy](https://github.com/SpexGuy):
+  "The optional here can be quite expensive from a memory perspective."
 
 * Add a state diagram for GenIterState transitions in GenIter.
 
@@ -47,3 +70,6 @@ when using `pub const io_mode = .evented;`.
   that might cause trouble in code that follows it.
 
 * Support non-void `.run()` function.
+
+* Support a variant of `.next()` that takes a value
+  that is returned by `.yield()`.
