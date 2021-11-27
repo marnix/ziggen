@@ -68,3 +68,15 @@ which makes `.next()` an async function.
 
 * Support a variant of `.next()` that takes a value
   that is returned by `.yield()`.
+
+* Support modifying the generator fields from the client?
+  (But that might be handing a footgun to them.)
+
+* Check out suggestions from [SpexGuy](https://github.com/SpexGuy)
+  that I don't understand yet:
+
+   - "Actually if you put a suspend at the beginning of `_run_gen` you can
+     delete that field \[`_gen` in struct `GenIter`\] entirely."
+
+   - "You can also delete the T from the state if you make it a stack value and
+     put a pointer to it in the yielder."
